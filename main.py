@@ -13,7 +13,7 @@ cascade = cv2.CascadeClassifier("haarcascade_eye.xml")
 # GUI Benutzeroberfläche wird erstellt
 root = tk.Tk()
 root.title("Augenerkennung")
-root.geometry('2200x1200')
+root.geometry('1440x900')
 
 # Framerate-Variable
 framerate = tk.DoubleVar()
@@ -67,10 +67,12 @@ def detect_blinking(eyes, empfindlichkeitswert):
 
     # Speichern des eye_region_threshold
     save_open_button_left.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "open_eye", position="open", partie="l"))
-    save_closed_button_left.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "closed_eye", position="closed", partie="l"))
+    save_tired_button_left.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "tired_eye", position="tired", partie="l"))
 
     save_open_button_right.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "open_eye", position="open", partie="r"))
-    save_closed_button_right.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "closed_eye", position="closed", partie="r"))
+    save_tired_button_right.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "tired_eye", position="tired", partie="r"))
+
+    save_error_button.config(state=tk.NORMAL, command=lambda: save_image(eye_region_threshold, "error_eye", position="error", partie="-"))
 
 def save_image(eye_region_threshold, folder, position, partie):
     if partie == "l":
@@ -89,6 +91,14 @@ def save_image(eye_region_threshold, folder, position, partie):
         cv2.imwrite(file_path, cv2.flip(eye_region_threshold, 1))
         print(f"Threshold saved to {file_path}")
 
+    if position == "error":
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+        file_path = os.path.join(folder, f"eye_{position}_{len(os.listdir(folder))+1}.png")
+        cv2.imwrite(file_path, eye_region_threshold)
+        print(f"Threshold saved to {file_path}")
+
 
 
 
@@ -102,38 +112,49 @@ blink_label.place(x=750,y=200,width=100, height=20)
 '''
 # Schieberegler für die Framerate
 framerate_label = tk.Label(root, text="Framerate:")
-framerate_label.place(x=400,y=0,width=200,height=20)
+framerate_label.place(x=480,y=0,width=200,height=20)
 framerate_scale = tk.Scale(master=root, variable=framerate, from_=1.0, to=30.0, orient=tk.HORIZONTAL, resolution=1.0, length=200)
 framerate_scale.set(10.0) # Standard-Framerate
-framerate_scale.place(x=400,y=20)
+framerate_scale.place(x=480,y=20)
 
 # Panel für die Anzeige des Video-Feeds erstellen
 panel = tk.Label(root)
-panel.place(x=0,y=200,width=640,height=480)
+panel.place(x=0,y=200,width=1440,height=700)
 
 # Anzeige der größe der Augenmatrix
 size_label = tk.Label(root, text="Größe:")
-size_label.place(x=780, y=560, width=100, height=20)
+size_label.place(x=960, y=0, width=100, height=20)
 
 # Panel für die Anzeige der Augenmatrix erstellen
 threshold_panel = tk.Label(root)
-threshold_panel.place(x=820,y=630, anchor=tk.CENTER)
+threshold_panel.place(x=960, y=30)
 
 # Button zum Speichern des offenen Auges links
 save_open_button_left = tk.Button(root, text="Save Open Left Eye", state=tk.DISABLED)
-save_open_button_left.place(x=650,y=600,width=125,height=20)
+save_open_button_left.place(x=810, y=30, width=125, height=20)
 
-# Button zum Speichern des geschlossenen Auges links
-save_closed_button_left = tk.Button(root, text="Save Closed Left Eye", state=tk.DISABLED)
-save_closed_button_left.place(x=650,y=640, width=125,height=20)
+# Button zum Speichern des mueden Auges links
+save_tired_button_left = tk.Button(root, text="Save Tired Left Eye", state=tk.DISABLED)
+save_tired_button_left.place(x=810, y=70, width=125, height=20)
 
 # Button zum Speichern des offenen Auges rechts
 save_open_button_right = tk.Button(root, text="Save Open Right Eye", state=tk.DISABLED)
-save_open_button_right.place(x=865,y=600,width=125,height=20)
+save_open_button_right.place(x=1210, y=30, width=125, height=20)
 
-# Button zum Speichern des geschlossenen Auges rechts
-save_closed_button_right = tk.Button(root, text="Save Closed Right Eye", state=tk.DISABLED)
-save_closed_button_right.place(x=865,y=640, width=125,height=20)
+# Button zum Speichern des mueden Auges rechts
+save_tired_button_right = tk.Button(root, text="Save Tired Right Eye", state=tk.DISABLED)
+save_tired_button_right.place(x=1210, y=70, width=125, height=20)
+
+# Button zum Speichern eines Fehlers bei der Augenerkennung
+save_error_button = tk.Button(root, text="Save Error", state=tk.DISABLED)
+save_error_button.place(x=1110, y=0, width=70, height=20)
+
+# Bind Shortcuts für die Buttons
+root.bind("<Alt-e>", lambda event: save_error_button.invoke())  # Tastenkürzel: Alt + e für "Error"
+root.bind("<Alt-a>", lambda event: save_open_button_left.invoke())  # Tastenkürzel: Alt + a für "Open Left Eye"
+root.bind("<Alt-y>", lambda event: save_tired_button_left.invoke())  # Tastenkürzel: Alt + y für "Closed Left Eye"
+root.bind("<Alt-g>", lambda event: save_open_button_right.invoke())  # Tastenkürzel: Alt + g für "Open Right Eye"
+root.bind("<Alt-b>", lambda event: save_tired_button_right.invoke())  # Tastenkürzel: Alt + b für "Closed Right Eye"
 
 # Funktion zum Aktualisieren des Video-Feeds
 def update():
@@ -160,6 +181,7 @@ def update():
 
         # Anzeige des Video-Feeds
         img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        img.thumbnail((960, 540))
         img = ImageTk.PhotoImage(image=img)
         panel.img = img
         panel.config(image=img)
@@ -169,6 +191,6 @@ def update():
 
 # Button zum Beenden der Anwendung
 btn_quit = tk.Button(root, text="Quit", command=root.destroy,bg="red", fg="black")
-btn_quit.place(x=950, y=0, width=50, height=40)
+btn_quit.place(x=1390, y=0, width=50, height=40)
 
 root.mainloop()
